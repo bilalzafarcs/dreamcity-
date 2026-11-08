@@ -1,0 +1,24 @@
+{
+  "name": "cloudcity",
+  "version": "1.0.0",
+  "description": "Cloud City - Interactive 3D Procedural Alpine Virtual Town",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "server": "node server.js",
+    "dev": "node server.js",
+    "static": "python -m http.server 3000"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "threejs",
+    "3d",
+    "virtual-city",
+    "webgl",
+    "game"
+  ],
+  "author": "",
+  "license": "MIT"
+}

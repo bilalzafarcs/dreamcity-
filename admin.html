@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cloud City — Resident Manager</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Figtree:wght@400;500;600;700;800&display=swap">
+<link rel="icon" href="icon-192.png">
+<style>
+:root {
+  --pine: #17302a;
+  --pine-dark: #0f201c;
+  --pine-light: #24443b;
+  --pine-card: #1c3831;
+  --gold: #f6c81e;
+  --gold-hover: #ffd84d;
+  --snow: #f3f7f6;
+  --snow-dim: #b8ccc7;
+  --snow-sub: #7e9c93;
+  --danger: #e74c3c;
+  --border: rgba(255, 255, 255, 0.12);
+  --font-display: 'Lilita One', 'Arial Black', system-ui, sans-serif;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--pine);
+  color: var(--snow);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+button, input, select {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  outline: none;
+}
+button { cursor: pointer; }
+a { color: var(--gold); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Lock Screen */
+#lockScreen {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, #1d3d35, #0a1714);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+}
+.lock-box {
+  background: var(--pine-dark);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 440px;
+  padding: 36px 32px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+.lock-icon {
+  font-size: 44px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+.lock-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.lock-sub {
+  font-size: 14px;
+  color: var(--snow-dim);
+  margin-bottom: 24px;
+  line-height: 1.4;
+}
+.lock-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+.lock-error {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #ff7675;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: center;
+  display: none;
+}
+
+/* Header */
+header {
+  background: var(--pine-dark);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand h1 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+}
+.brand span {
+  background: var(--pine-light);
+  color: var(--snow);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn {
+  background: var(--pine-light);
+  color: var(--snow);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  background: var(--pine-card);
+  border-color: var(--snow-sub);
+}
+.btn-primary {
+  background: var(--gold);
+  color: var(--pine-dark);
+  border: none;
+  font-weight: 700;
+}
+.btn-primary:hover {
+  background: var(--gold-hover);
+  color: #000;
+}
+.btn-danger {
+  background: rgba(231, 76, 60, 0.15);
+  color: #ff7675;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+.btn-danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* Main Container */
+main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+  width: 100%;
+  flex: 1;
+}
+
+/* Security Auth Banner */
+.auth-card {
+  background: var(--pine-dark);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+.auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.auth-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #95a5a6;
+}
+.status-pill.connected { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
+.status-pill.connected .status-dot { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+.status-pill.error { background: rgba(231, 76, 60, 0.15); color: #ff7675; }
+.status-pill.error .status-dot { background: #e74c3c; }
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--snow-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.input-text {
+  background: var(--pine);
+  border: 1px solid var(--border);
+  color: var(--snow);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.input-text:focus {
+  border-color: var(--gold);
+}
+.input-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-password-wrap input {
+  padding-right: 48px;
+}
+.toggle-pwd {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--snow-sub);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Stats Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--pine-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-title {
+  font-size: 13px;
+  color: var(--snow-dim);
+  font-weight: 600;
+}
+.stat-val {
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: var(--gold);
+  line-height: 1;
+}
+.stat-sub {
+  font-size: 12px;
+  color: var(--snow-sub);
+}
+
+/* Controls & Search */
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+  max-width: 480px;
+}
+.search-box input {
+  width: 100%;
+  padding-left: 36px;
+}
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--snow-sub);
+  pointer-events: none;
+}
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.select-input {
+  background: var(--pine-card);
+  border: 1px solid var(--border);
+  color: var(--snow);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.select-input option {
+  background: var(--pine-dark);
+}
+
+/* Residents Table */
+.table-wrap {
+  background: var(--pine-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+thead tr {
+  background: var(--pine-dark);
+  border-bottom: 1px solid var(--border);
+}
+th {
+  padding: 14px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--snow-dim);
+}
+tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s ease;
+}
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+td {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+.resident-nick {
+  font-weight: 700;
+  color: var(--snow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.resident-alias {
+  font-size: 12px;
+  color: var(--snow-sub);
+}
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.badge-lvl-1 { background: rgba(52, 152, 219, 0.18); color: #74b9ff; border: 1px solid rgba(52, 152, 219, 0.3); }
+.badge-lvl-2 { background: rgba(155, 89, 182, 0.18); color: #a29bfe; border: 1px solid rgba(155, 89, 182, 0.3); }
+.badge-lvl-3 { background: rgba(241, 196, 15, 0.18); color: #ffeaa7; border: 1px solid rgba(241, 196, 15, 0.3); }
+.badge-wish { background: rgba(46, 204, 113, 0.18); color: #55efc4; border: 1px solid rgba(46, 204, 113, 0.3); }
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--pine-dark);
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--snow-dim);
+}
+.page-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 18, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-box {
+  background: var(--pine-dark);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-header h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--gold);
+}
+.modal-close {
+  background: none;
+  font-size: 24px;
+  color: var(--snow-sub);
+  line-height: 1;
+}
+.modal-close:hover { color: var(--snow); }
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--pine-dark);
+  color: var(--snow);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 200;
+}
+#toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<!-- Gated Login / Lock Screen -->
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <h2 class="lock-title">CLOUD CITY</h2>
+    <p class="lock-sub">Resident Manager is restricted to authorized town administrators only.</p>
+    <div class="lock-error" id="lockError"></div>
+    <form class="lock-form" id="lockForm">
+      <div class="form-group">
+        <label for="lockToken">Admin Secret Password / Token</label>
+        <div class="input-password-wrap">
+          <input type="password" id="lockToken" class="input-text" placeholder="Enter secret token..." required autofocus>
+          <button type="button" class="toggle-pwd" id="bToggleLockPwd">SHOW</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="lockUrl">Secure API URL (Optional if hosted locally)</label>
+        <input type="text" id="lockUrl" class="input-text" placeholder="Leave empty for current domain or enter https://api...">
+      </div>
+      <button type="submit" class="btn btn-primary" style="justify-content: center; padding: 12px;">Unlock Dashboard</button>
+      <a href="/" style="text-align: center; font-size: 13px; color: var(--snow-sub); margin-top: 8px;">← Return to Town</a>
+    </form>
+  </div>
+</div>
+
+<!-- Main Admin App (Hidden until authenticated) -->
+<div id="adminApp" style="display: none; flex-direction: column; min-height: 100vh;">
+  <header>
+    <div class="brand">
+      <h1>CLOUD CITY</h1>
+      <span>Resident Manager</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="bExport" title="Export residents list to JSON">📤 Export JSON</button>
+      <a href="index.html" class="btn" target="_blank">🏔️ View Town</a>
+      <button class="btn btn-danger" id="bLogout" title="Lock admin dashboard">🔒 Log Out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Status Card -->
+    <section class="auth-card">
+      <div class="auth-header">
+        <div class="auth-title">
+          <span>Connected to: <strong id="curApiLabel" style="color: var(--gold);">Local Server</strong></span>
+          <div class="status-pill connected" id="connStatus">
+            <span class="status-dot"></span>
+            <span id="connStatusText">Authenticated</span>
+          </div>
+        </div>
+        <small style="color: var(--snow-sub);">Bearer authorization active</small>
+      </div>
+    </section>
+
+    <!-- Town & Claim Button Settings Card -->
+    <section class="auth-card" style="margin-bottom: 24px;">
+      <div class="auth-header" style="margin-bottom: 14px;">
+        <div class="auth-title">
+          <span>⚙️ Dynamic Claim Button & Free Plot Settings</span>
+        </div>
+        <small style="color: var(--snow-sub);">Controls the "Claim it on Instagram" button & text on free plots</small>
+      </div>
+      <form id="settingsForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group">
+          <label for="setClaimText">Claim Button Call-To-Action Text</label>
+          <input type="text" id="setClaimText" class="input-text" placeholder="e.g. Claim it on Instagram" value="Claim it on Instagram" required>
+        </div>
+        <div class="form-group">
+          <label for="setClaimUrl">Claim Button Destination URL</label>
+          <input type="url" id="setClaimUrl" class="input-text" placeholder="e.g. https://www.instagram.com/yourhandle/" value="https://www.instagram.com/dreamcity/" required>
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="setClaimDesc">Plot Description Instructions</label>
+          <input type="text" id="setClaimDesc" class="input-text" placeholder="e.g. Comment HOUSE on our latest post to get your plot." value="Comment HOUSE under our latest post and your home goes up here.">
+        </div>
+        <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 6px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+            <input type="checkbox" id="setClaimEnabled" checked style="width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer;">
+            <span>Enable & Show Claim Button on Free Plots</span>
+          </label>
+          <button type="submit" class="btn btn-primary" id="bSaveSettings">💾 Save Settings</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Statistics -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-title">Total Residents</span>
+        <span class="stat-val" id="stTotal">0</span>
+        <span class="stat-sub">Plots: 10,000 capacity</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">House Tiers</span>
+        <span class="stat-val" id="stLevels" style="font-size: 22px; padding-top: 6px;">-</span>
+        <span class="stat-sub">House (L1) / Chalet (L2) / Lodge (L3)</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Special Architecture Wishes</span>
+        <span class="stat-val" id="stWishes">0</span>
+        <span class="stat-sub">Castles, Mansions, Donuts, Spaceships...</span>
+      </div>
+    </section>
+
+    <!-- Controls Bar -->
+    <section class="controls-bar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="qSearch" class="input-text" placeholder="Search residents by nickname, alias, or wish...">
+      </div>
+      <div class="filter-group">
+        <select id="fLevel" class="select-input">
+          <option value="">All Levels</option>
+          <option value="1">Level 1 (House)</option>
+          <option value="2">Level 2 (Chalet)</option>
+          <option value="3">Level 3 (Lodge)</option>
+        </select>
+        <select id="fWish" class="select-input">
+          <option value="">All Types</option>
+          <option value="has_wish">Has Custom Wish</option>
+          <option value="standard">Standard House</option>
+        </select>
+        <button class="btn btn-primary" id="bOpenAdd">➕ Add Resident</button>
+      </div>
+    </section>
+
+    <!-- Residents Table -->
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 70px;">#</th>
+            <th>Resident Nickname</th>
+            <th>Social Alias</th>
+            <th>Tier</th>
+            <th>House Wish / Style</th>
+            <th style="text-align: right; width: 140px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyResidents">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--snow-sub);">
+              Loading residents...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pagination">
+        <span id="pageInfo">Showing 0 - 0 of 0</span>
+        <div class="page-nav">
+          <button class="btn btn-sm" id="pPrev">◀ Prev</button>
+          <span id="pageCur" style="font-weight: 700; padding: 0 8px;">1</span>
+          <button class="btn btn-sm" id="pNext">Next ▶</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Add / Edit Resident Modal -->
+<div class="modal-backdrop" id="modalResident">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modalTitle">Add Resident</h3>
+      <button class="modal-close" id="bCloseModal">&times;</button>
+    </div>
+    <form id="residentForm" class="modal-body">
+      <input type="hidden" id="editIndex" value="-1">
+      <input type="hidden" id="originalNick" value="">
+      
+      <div class="form-group">
+        <label for="mNick">Nickname *</label>
+        <input type="text" id="mNick" class="input-text" placeholder="e.g. follower_name" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="mAlias">Social Handle / Alias (TikTok / IG)</label>
+        <input type="text" id="mAlias" class="input-text" placeholder="e.g. @username">
+      </div>
+
+      <div class="form-group">
+        <label for="mLvl">House Tier</label>
+        <select id="mLvl" class="select-input">
+          <option value="1">Level 1 — Standard House</option>
+          <option value="2">Level 2 — Alpine Chalet</option>
+          <option value="3">Level 3 — Grand Lodge</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="mWish">Special House Wish</label>
+        <select id="mWish" class="select-input">
+          <option value="">None (Standard Procedural House)</option>
+          <option value="castle">🏰 Castle</option>
+          <option value="mansion">🏛️ Mansion</option>
+          <option value="skyscraper">🏙️ Skyscraper</option>
+          <option value="spaceship">🚀 Spaceship</option>
+          <option value="donut">🍩 Donut</option>
+          <option value="pizza">🍕 Pizza</option>
+          <option value="chicken">🍗 Chicken</option>
+          <option value="farm">🚜 Farm</option>
+          <option value="gym">🏋️ Gym</option>
+          <option value="goldmansion">👑 Gold Mansion</option>
+          <option value="lighthouse">🗼 Lighthouse</option>
+          <option value="pyramid">🔺 Pyramid</option>
+          <option value="river">🌊 Riverfront</option>
+          <option value="tree">🌲 Treehouse</option>
+          <option value="corner">📐 Corner Plot</option>
+          <option value="edge">🏔️ Valley Edge</option>
+          <option value="luxury">💎 Luxury</option>
+          <option value="music">🎵 Music Studio</option>
+          <option value="cat">🐱 Cat Sanctuary</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="mCustomWish">Or Custom Wish Name</label>
+        <input type="text" id="mCustomWish" class="input-text" placeholder="custom wish name">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn" id="bCancelModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="bSaveResident">Save Resident</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const toast = msg => {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove('show'), 3200);
+  };
+
+  let residents = [];
+  let filtered = [];
+  let page = 1;
+  const pageSize = 50;
+
+  const getStoredConfig = () => {
+    const qToken = new URLSearchParams(location.search).get('token') || new URLSearchParams(location.search).get('key') || '';
+    const qApi = new URLSearchParams(location.search).get('api') || '';
+    return {
+      url: qApi || localStorage.getItem('DC_API_URL') || '',
+      token: qToken || sessionStorage.getItem('DC_ADMIN_TOKEN') || localStorage.getItem('DC_ADMIN_TOKEN') || ''
+    };
+  };
+
+  const saveConfig = (url, token) => {
+    url = (url || '').trim().replace(/\/+$/, '');
+    token = (token || '').trim();
+    if (url) localStorage.setItem('DC_API_URL', url);
+    else localStorage.removeItem('DC_API_URL');
+    sessionStorage.setItem('DC_ADMIN_TOKEN', token);
+    localStorage.setItem('DC_ADMIN_TOKEN', token);
+  };
+
+  const clearAuth = () => {
+    sessionStorage.removeItem('DC_ADMIN_TOKEN');
+    localStorage.removeItem('DC_ADMIN_TOKEN');
+    $('adminApp').style.display = 'none';
+    $('lockScreen').style.display = 'flex';
+    $('lockToken').value = '';
+    showLockError('');
+  };
+
+  const showLockError = msg => {
+    const el = $('lockError');
+    if (msg) {
+      el.textContent = msg;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  };
+
+  async function apiFetch(path, options = {}) {
+    const { url, token } = getStoredConfig();
+    const target = (url ? url.replace(/\/+$/, '') : '') + (path.startsWith('/') ? path : '/' + path);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}`, 'X-Admin-Token': token } : {}),
+      ...(options.headers || {})
+    };
+
+    const res = await fetch(target, { ...options, headers });
+    if (!res.ok) {
+      const errText = await res.text();
+      let msg = `HTTP ${res.status}`;
+      try {
+        const json = JSON.parse(errText);
+        msg = json.message || json.error || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  async function verifyAndUnlock(token, url) {
+    saveConfig(url, token);
+    showLockError('');
+    try {
+      // Test auth against server
+      await apiFetch('/api/admin/verify', {
+        method: 'POST',
+        body: JSON.stringify({ token })
+      }).catch(async (e) => {
+        // Fallback: test against GET /api/residents
+        await apiFetch('/api/residents');
+      });
+
+      // Unlocked!
+      $('lockScreen').style.display = 'none';
+      $('adminApp').style.display = 'flex';
+      $('curApiLabel').textContent = url || 'Local Server';
+      loadResidents();
+      loadSettings();
+    } catch (err) {
+      clearAuth();
+      showLockError('❌ Access Denied: Invalid Admin Secret Password / Token');
+    }
+  }
+
+  async function loadResidents() {
+    try {
+      const data = await apiFetch('/api/residents');
+      const list = Array.isArray(data) ? data : (data && Array.isArray(data.residents) ? data.residents : []);
+      residents = list.map(r => typeof r === 'string' ? { n: r, lvl: 1 } : { ...r, lvl: r.lvl || 1 });
+      $('connStatusText').textContent = `Connected (${residents.length} residents)`;
+      applyFilter();
+    } catch (err) {
+      toast(`Error loading residents: ${err.message}`);
+    }
+  }
+
+  function updateStats() {
+    $('stTotal').textContent = residents.length.toLocaleString();
+    let l1 = 0, l2 = 0, l3 = 0, wishes = 0;
+    for (const r of residents) {
+      const lvl = r.lvl || 1;
+      if (lvl === 3) l3++;
+      else if (lvl === 2) l2++;
+      else l1++;
+      if (r.wish) wishes++;
+    }
+    $('stLevels').textContent = `${l1.toLocaleString()} / ${l2.toLocaleString()} / ${l3.toLocaleString()}`;
+    $('stWishes').textContent = wishes.toLocaleString();
+  }
+
+  function applyFilter() {
+    const q = $('qSearch').value.trim().toLowerCase();
+    const fL = $('fLevel').value;
+    const fW = $('fWish').value;
+
+    filtered = residents.filter(r => {
+      const nick = (r.n || '').toLowerCase();
+      const alias = (r.a || '').toLowerCase();
+      const wish = (r.wish || '').toLowerCase();
+
+      if (q && !nick.includes(q) && !alias.includes(q) && !wish.includes(q)) return false;
+      if (fL && String(r.lvl || 1) !== fL) return false;
+      if (fW === 'has_wish' && !r.wish) return false;
+      if (fW === 'standard' && r.wish) return false;
+      return true;
+    });
+
+    page = 1;
+    updateStats();
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = $('tbodyResidents');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--snow-sub);">No residents found matching your criteria.</td></tr>`;
+      $('pageInfo').textContent = 'Showing 0 of 0';
+      $('pageCur').textContent = '1';
+      return;
+    }
+
+    const start = (page - 1) * pageSize;
+    const pageItems = filtered.slice(start, start + pageSize);
+
+    tbody.innerHTML = pageItems.map((r, i) => {
+      const idx = start + i + 1;
+      const lvl = r.lvl || 1;
+      const lvlName = lvl === 3 ? 'L3 Lodge' : (lvl === 2 ? 'L2 Chalet' : 'L1 House');
+      const lvlClass = `badge-lvl-${lvl}`;
+      const wishBadge = r.wish ? `<span class="badge badge-wish">✨ ${escapeHtml(r.wish)}</span>` : '<span style="color:var(--snow-sub); font-size: 12px;">Standard</span>';
+      const aliasText = r.a ? `<span class="resident-alias">${escapeHtml(r.a)}</span>` : '<span style="color:var(--snow-sub);">-</span>';
+
+      return `
+        <tr>
+          <td style="color: var(--snow-sub); font-size: 12px;">${idx}</td>
+          <td><div class="resident-nick">${escapeHtml(r.n)}</div></td>
+          <td>${aliasText}</td>
+          <td><span class="badge ${lvlClass}">${lvlName}</span></td>
+          <td>${wishBadge}</td>
+          <td>
+            <div class="table-actions">
+              <button class="btn btn-sm bEdit" data-nick="${escapeHtml(r.n)}" title="Edit resident">✏️ Edit</button>
+              <button class="btn btn-sm btn-danger bDelete" data-nick="${escapeHtml(r.n)}" title="Delete resident">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const end = Math.min(start + pageSize, filtered.length);
+    $('pageInfo').textContent = `Showing ${start + 1} - ${end} of ${filtered.length.toLocaleString()}`;
+    $('pageCur').textContent = `${page} / ${Math.max(1, Math.ceil(filtered.length / pageSize))}`;
+  }
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  const openModal = (resident = null) => {
+    $('editIndex').value = resident ? 'edit' : '-1';
+    $('originalNick').value = resident ? resident.n : '';
+    $('modalTitle').textContent = resident ? `Edit Resident: ${resident.n}` : 'Add New Resident';
+    $('mNick').value = resident ? resident.n : '';
+    $('mAlias').value = resident ? (resident.a || '') : '';
+    $('mLvl').value = resident ? (resident.lvl || 1) : '1';
+    
+    const knownWishes = ['castle','mansion','skyscraper','spaceship','donut','pizza','chicken','farm','gym','goldmansion','lighthouse','pyramid','river','tree','corner','edge','luxury','music','cat'];
+    if (resident && resident.wish && knownWishes.includes(resident.wish)) {
+      $('mWish').value = resident.wish;
+      $('mCustomWish').value = '';
+    } else if (resident && resident.wish) {
+      $('mWish').value = '';
+      $('mCustomWish').value = resident.wish;
+    } else {
+      $('mWish').value = '';
+      $('mCustomWish').value = '';
+    }
+
+    $('modalResident').classList.add('open');
+    $('mNick').focus();
+  };
+
+  const closeModal = () => {
+    $('modalResident').classList.remove('open');
+  };
+
+  async function handleSaveResident(e) {
+    e.preventDefault();
+    const isEdit = $('editIndex').value === 'edit';
+    const originalNick = $('originalNick').value;
+    const nick = $('mNick').value.trim();
+    const alias = $('mAlias').value.trim();
+    const lvl = Number($('mLvl').value) || 1;
+    const wish = $('mCustomWish').value.trim() || $('mWish').value || undefined;
+
+    if (!nick) return;
+
+    const payload = { n: nick, lvl };
+    if (alias) payload.a = alias;
+    if (wish) payload.wish = wish;
+
+    try {
+      const path = isEdit ? `/api/residents/${encodeURIComponent(originalNick)}` : '/api/residents';
+      const method = isEdit ? 'PUT' : 'POST';
+      await apiFetch(path, { method, body: JSON.stringify(payload) });
+      toast(`Resident ${nick} saved!`);
+      closeModal();
+      await loadResidents();
+      try { localStorage.setItem('DC_LOCAL_RESIDENTS', JSON.stringify(residents)); } catch {}
+    } catch (err) {
+      toast(`Save error: ${err.message}`);
+    }
+  }
+
+  async function handleDelete(nick) {
+    if (!confirm(`Are you sure you want to remove resident "${nick}"?`)) return;
+    try {
+      await apiFetch(`/api/residents/${encodeURIComponent(nick)}`, { method: 'DELETE' });
+      toast(`Resident ${nick} removed.`);
+      await loadResidents();
+      try { localStorage.setItem('DC_LOCAL_RESIDENTS', JSON.stringify(residents)); } catch {}
+    } catch (err) {
+      toast(`Delete failed: ${err.message}`);
+    }
+  }
+
+  async function loadSettings() {
+    try {
+      const data = await apiFetch('/api/settings');
+      if (data) {
+        $('setClaimText').value = data.claimText || 'Claim it on Instagram';
+        $('setClaimUrl').value = data.claimUrl || 'https://www.instagram.com/dreamcity/';
+        $('setClaimDesc').value = data.claimDesc || 'Comment HOUSE under our latest post and your home goes up here.';
+        $('setClaimEnabled').checked = data.claimEnabled !== undefined ? !!data.claimEnabled : true;
+        try { localStorage.setItem('DC_SETTINGS', JSON.stringify(data)); } catch {}
+      }
+    } catch {
+      try {
+        const cached = JSON.parse(localStorage.getItem('DC_SETTINGS') || '{}');
+        if (cached && cached.claimText) {
+          $('setClaimText').value = cached.claimText;
+          $('setClaimUrl').value = cached.claimUrl || 'https://www.instagram.com/dreamcity/';
+          $('setClaimDesc').value = cached.claimDesc || 'Comment HOUSE under our latest post and your home goes up here.';
+          $('setClaimEnabled').checked = cached.claimEnabled !== undefined ? !!cached.claimEnabled : true;
+        }
+      } catch {}
+    }
+  }
+
+  async function handleSaveSettings(e) {
+    e.preventDefault();
+    const payload = {
+      claimText: $('setClaimText').value.trim() || 'Claim it on Instagram',
+      claimUrl: $('setClaimUrl').value.trim() || 'https://www.instagram.com/dreamcity/',
+      claimDesc: $('setClaimDesc').value.trim() || 'Comment HOUSE under our latest post and your home goes up here.',
+      claimEnabled: $('setClaimEnabled').checked
+    };
+    try {
+      await apiFetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      localStorage.setItem('DC_SETTINGS', JSON.stringify(payload));
+      toast('Dynamic Claim button settings saved!');
+    } catch (err) {
+      localStorage.setItem('DC_SETTINGS', JSON.stringify(payload));
+      toast(`Saved locally (${err.message})`);
+    }
+  }
+
+  function handleExport() {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(residents, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', dataStr);
+    dlAnchor.setAttribute('download', `dreamcity-residents-${new Date().toISOString().slice(0,10)}.json`);
+    dlAnchor.click();
+    toast('Exported residents list.');
+  }
+
+  // Event handlers
+  $('lockForm').onsubmit = e => {
+    e.preventDefault();
+    verifyAndUnlock($('lockToken').value, $('lockUrl').value);
+  };
+
+  $('bLogout').onclick = clearAuth;
+  $('bExport').onclick = handleExport;
+  $('bOpenAdd').onclick = () => openModal();
+  $('bCloseModal').onclick = closeModal;
+  $('bCancelModal').onclick = closeModal;
+  $('residentForm').onsubmit = handleSaveResident;
+  $('settingsForm').onsubmit = handleSaveSettings;
+
+  $('qSearch').oninput = applyFilter;
+  $('fLevel').onchange = applyFilter;
+  $('fWish').onchange = applyFilter;
+
+  $('pPrev').onclick = () => { if (page > 1) { page--; renderTable(); } };
+  $('pNext').onclick = () => { if (page * pageSize < filtered.length) { page++; renderTable(); } };
+
+  $('tbodyResidents').onclick = e => {
+    const editBtn = e.target.closest('.bEdit');
+    const delBtn = e.target.closest('.bDelete');
+    if (editBtn) {
+      const res = residents.find(r => r.n.toLowerCase() === editBtn.dataset.nick.toLowerCase());
+      if (res) openModal(res);
+    } else if (delBtn) {
+      handleDelete(delBtn.dataset.nick);
+    }
+  };
+
+  $('bToggleLockPwd').onclick = () => {
+    const inp = $('lockToken');
+    const isPwd = inp.type === 'password';
+    inp.type = isPwd ? 'text' : 'password';
+    $('bToggleLockPwd').textContent = isPwd ? 'HIDE' : 'SHOW';
+  };
+
+  // Auto-authenticate if credentials exist
+  const conf = getStoredConfig();
+  if (conf.token) {
+    verifyAndUnlock(conf.token, conf.url);
+  }
+})();
+</script>
+</body>
+</html>
