@@ -96,10 +96,10 @@ From this dashboard, you can:
 - 📦 **Seed / Bulk Sync**: upload all bundled residents to your remote database in one click.
 - 📤 **Export**: download the full resident database to JSON anytime.
 
-### 2. Connect DreamCity Frontend to your Secure API
-Dream City can automatically load residents dynamically from your secure endpoint at startup. You can specify the API URL in any of the following ways:
+### 2. Connect Cloud City Frontend to your Secure API
+Cloud City can automatically load residents dynamically from your secure endpoint at startup. You can specify the API URL in any of the following ways:
 
-1. **Via Admin Dashboard**: Connect once in `admin.html`; it automatically saves the API URL for Dream City.
+1. **Via Admin Dashboard**: Connect once in `admin.html`; it automatically saves the API URL for Cloud City.
 2. **Via URL Parameter**:
    ```
    http://localhost:3000/?api=https://your-api.com
@@ -113,10 +113,10 @@ Dream City can automatically load residents dynamically from your secure endpoin
    };
    ```
 
-*Note: If the remote API is offline or slow, Dream City automatically and gracefully falls back to the local bundled `residents.js` list.*
+*Note: If the remote API is offline or slow, Cloud City automatically and gracefully falls back to the local bundled `residents.js` list.*
 
 ### 3. API Specification for External Backends
-If you are connecting Dream City and the Resident Manager to an external backend or custom microservice, ensure it implements these REST endpoints:
+If you are connecting Cloud City and the Resident Manager to an external backend or custom microservice, ensure it implements these REST endpoints:
 
 - `GET /api/residents` — Returns `[{ n: "the_mayor", lvl: 3 }, { n: "alice", wish: "castle" }, ...]`
 - `POST /api/residents` — Create resident. Headers: `Authorization: Bearer <ADMIN_TOKEN>`

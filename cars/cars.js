@@ -1,4 +1,4 @@
-// Dream City cars: an SUV, a sports car and an everyday hatchback.
+// Cloud City cars: an SUV, a sports car and an everyday hatchback.
 // Each body is ONE lofted skin. Glass, seams, lamps and trim are all projected onto that same skin, so nothing looks stuck on.
 // x forward, y up, z to the driver's side (right-hand drive), metres.
 (function () {
@@ -259,7 +259,7 @@
 
   function plates({ s, m, face, skin, add }) {
     const y = { hatch: [.5, .6], sport: [.3, .39], suv: [.82, .93] }[s.kind], yr = { hatch: [.76, .87], sport: [.56, .66], suv: [.98, 1.09] }[s.kind], W = .26;
-    const mk = (end, yy, rear) => { const mat = new T.MeshStandardMaterial({ map: plateTex(rear ? 'DR34 M' : 'DR34 M', rear), roughness: .4 }); const x = skin.faceX(end, (yy[0] + yy[1]) / 2, 0); const g = new T.PlaneGeometry(W * 2, yy[1] - yy[0]); const o = new T.Mesh(g, mat); o.position.set(x + end * .012, (yy[0] + yy[1]) / 2, 0); o.rotation.y = end > 0 ? Math.PI / 2 : -Math.PI / 2; add(o); };
+    const mk = (end, yy, rear) => { const mat = new T.MeshStandardMaterial({ map: plateTex(rear ? 'CL0U D' : 'CL0U D', rear), roughness: .4 }); const x = skin.faceX(end, (yy[0] + yy[1]) / 2, 0); const g = new T.PlaneGeometry(W * 2, yy[1] - yy[0]); const o = new T.Mesh(g, mat); o.position.set(x + end * .012, (yy[0] + yy[1]) / 2, 0); o.rotation.y = end > 0 ? Math.PI / 2 : -Math.PI / 2; add(o); };
     mk(1, y, false); mk(-1, yr, true);
   }
 
@@ -354,5 +354,5 @@
     both(g => { const c = skin.faceX(-1, .6, .3); })
   }
 
-  window.DreamCars = { build, SPEC };
+  window.CloudCars = { build, SPEC };
 })();

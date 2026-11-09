@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = Number(process.env.PORT) || 3000;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'dreamcity_secret_token_2026';
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'cloudcity_secret_token_2026';
 const DATA_DIR = path.join(__dirname, 'data');
 const RESIDENTS_FILE = path.join(DATA_DIR, 'residents.json');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
@@ -28,7 +28,7 @@ let state = {
 };
 let settings = {
   claimText: 'Claim it on Instagram',
-  claimUrl: 'https://www.instagram.com/dreamcity/',
+  claimUrl: 'https://www.instagram.com/cloudcity/',
   claimEnabled: true,
   claimDesc: 'Comment HOUSE under our latest post and your home goes up here.'
 };

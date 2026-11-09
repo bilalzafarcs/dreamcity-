@@ -1,5 +1,5 @@
-// Dream City offline helper: repeat visits load at once, the live town data always comes from the network.
-const CACHE = 'dream-city-2';
+// Cloud City offline helper: repeat visits load at once, the live town data always comes from the network.
+const CACHE = 'cloud-city-2';
 const isAsset = u => u.origin === location.origin ? /\.(js|webp|png|jpg|webmanifest)$/.test(u.pathname) && u.pathname !== '/sw.js' : u.hostname === 'cdn.jsdelivr.net' || u.hostname === 'fonts.gstatic.com' || u.hostname === 'fonts.googleapis.com';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil((async () => { for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k); await self.clients.claim(); })()));

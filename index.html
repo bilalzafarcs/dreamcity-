@@ -15,8 +15,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cloud City">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preload" as="image" href="boot-p.webp" media="(max-aspect-ratio:1/1)" fetchpriority="high">
-<link rel="preload" as="image" href="boot-w.webp" media="(min-aspect-ratio:1/1)" fetchpriority="high">
+<link rel="preload" as="image" href="boot-p.webp?v=cloud2" media="(max-aspect-ratio:1/1)" fetchpriority="high">
+<link rel="preload" as="image" href="boot-w.webp?v=cloud2" media="(min-aspect-ratio:1/1)" fetchpriority="high">
 <style id="bootcss">
 #boot{position:fixed;inset:0;z-index:30;overflow:hidden;background:linear-gradient(#b5808f,#d99a8e 42%,#3c4a35 62%,#1c2620);transition:opacity .4s ease}
 #boot.go{opacity:0;pointer-events:none}
@@ -214,7 +214,7 @@ body.strolling #top,body.strolling #rail,body.strolling #bottom{display:none}
 </head>
 <body>
 <div id="boot" role="status" aria-label="Loading Cloud City">
-<picture><source media="(min-aspect-ratio:1/1)" srcset="boot-w.webp"><img src="boot-p.webp" alt="" fetchpriority="high" decoding="sync"></picture>
+<picture><source media="(min-aspect-ratio:1/1)" srcset="boot-w.webp?v=cloud2"><img src="boot-p.webp?v=cloud2" alt="" fetchpriority="high" decoding="sync"></picture>
 <div class="bwrap"><div class="bbox"><div class="btop"><span class="bs">Building your city</span><div class="bp"><span class="bnum" id="bootN"></span><span>%</span></div></div><div class="bbar"><i id="bootB"></i></div><div class="bfoot">One follower, one house</div></div></div>
 </div>
 <script>
@@ -268,7 +268,7 @@ window.bootDone=function(){setTimeout(end,Math.max(0,1100-(performance.now()-t0)
     </div>
     <button id="bEnter" class="enter" hidden>Enter house</button>
     <button id="bBuild" class="rebuild">Watch your house being built</button>
-    <a id="claim" class="claim" hidden href="https://www.instagram.com/dreamcity/" target="_blank" rel="noopener">Claim it on Instagram</a>
+    <a id="claim" class="claim" hidden href="https://www.instagram.com/cloudcity/" target="_blank" rel="noopener">Claim it on Instagram</a>
   </section>
 </div>
 
@@ -288,7 +288,7 @@ window.bootDone=function(){setTimeout(end,Math.max(0,1100-(performance.now()-t0)
 <div id="toast" hidden role="status"></div>
 
 <script src="three.min.js"></script>
-<script src="residents.js?v=20261107x" charset="utf-8"></script>
-<script src="app.js?v=20261107x" charset="utf-8"></script>
+<script src="residents.js?v=cloud2" charset="utf-8"></script>
+<script src="app.js?v=cloud2" charset="utf-8"></script>
 </body>
 </html>

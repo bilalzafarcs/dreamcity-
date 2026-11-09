@@ -593,7 +593,7 @@ td {
         </div>
         <div class="form-group">
           <label for="setClaimUrl">Claim Button Destination URL</label>
-          <input type="url" id="setClaimUrl" class="input-text" placeholder="e.g. https://www.instagram.com/yourhandle/" value="https://www.instagram.com/dreamcity/" required>
+          <input type="url" id="setClaimUrl" class="input-text" placeholder="e.g. https://www.instagram.com/yourhandle/" value="https://www.instagram.com/cloudcity/" required>
         </div>
         <div class="form-group" style="grid-column: 1 / -1;">
           <label for="setClaimDesc">Plot Description Instructions</label>
@@ -1023,7 +1023,7 @@ td {
       const data = await apiFetch('/api/settings');
       if (data) {
         $('setClaimText').value = data.claimText || 'Claim it on Instagram';
-        $('setClaimUrl').value = data.claimUrl || 'https://www.instagram.com/dreamcity/';
+        $('setClaimUrl').value = data.claimUrl || 'https://www.instagram.com/cloudcity/';
         $('setClaimDesc').value = data.claimDesc || 'Comment HOUSE under our latest post and your home goes up here.';
         $('setClaimEnabled').checked = data.claimEnabled !== undefined ? !!data.claimEnabled : true;
         try { localStorage.setItem('DC_SETTINGS', JSON.stringify(data)); } catch {}
@@ -1033,7 +1033,7 @@ td {
         const cached = JSON.parse(localStorage.getItem('DC_SETTINGS') || '{}');
         if (cached && cached.claimText) {
           $('setClaimText').value = cached.claimText;
-          $('setClaimUrl').value = cached.claimUrl || 'https://www.instagram.com/dreamcity/';
+          $('setClaimUrl').value = cached.claimUrl || 'https://www.instagram.com/cloudcity/';
           $('setClaimDesc').value = cached.claimDesc || 'Comment HOUSE under our latest post and your home goes up here.';
           $('setClaimEnabled').checked = cached.claimEnabled !== undefined ? !!cached.claimEnabled : true;
         }
@@ -1045,7 +1045,7 @@ td {
     e.preventDefault();
     const payload = {
       claimText: $('setClaimText').value.trim() || 'Claim it on Instagram',
-      claimUrl: $('setClaimUrl').value.trim() || 'https://www.instagram.com/dreamcity/',
+      claimUrl: $('setClaimUrl').value.trim() || 'https://www.instagram.com/cloudcity/',
       claimDesc: $('setClaimDesc').value.trim() || 'Comment HOUSE under our latest post and your home goes up here.',
       claimEnabled: $('setClaimEnabled').checked
     };
@@ -1066,7 +1066,7 @@ td {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(residents, null, 2));
     const dlAnchor = document.createElement('a');
     dlAnchor.setAttribute('href', dataStr);
-    dlAnchor.setAttribute('download', `dreamcity-residents-${new Date().toISOString().slice(0,10)}.json`);
+    dlAnchor.setAttribute('download', `cloudcity-residents-${new Date().toISOString().slice(0,10)}.json`);
     dlAnchor.click();
     toast('Exported residents list.');
   }

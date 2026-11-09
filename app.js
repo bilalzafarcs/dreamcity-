@@ -1,5 +1,5 @@
 /* Friend counts decide house levels, so they are fetched first; the town still opens if the database is slow or away. */
-const dreamCity = () => {
+const cloudCity = () => {
 'use strict';
 const $ = id => document.getElementById(id);
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check your connection and refresh the page.</div>'); return; }
@@ -32,12 +32,22 @@ class Geo {
   constructor() { this.cap = 3000; this.n = 0; this.p = new Float32Array(this.cap * 3); this.m = new Float32Array(this.cap * 3); this.c = new Float32Array(this.cap * 3); this.ox = 0; this.oz = 0; this.flip = 1; }
   at(x, z, flip = 1) { this.ox = x; this.oz = z; this.flip = flip; return this; }
   grow() { this.cap *= 2; for (const k of ['p', 'm', 'c']) { const a = new Float32Array(this.cap * 3); a.set(this[k]); this[k] = a; } }
-  tri(a, b, c, col) {
+  tri(a, b, c, col, nA, nB, nC) {
     if (this.n + 3 > this.cap) this.grow();
     const f = this.flip, k = this.sc || 1, ky = this.sy || 1, P = [a, b, c].map(v => [v[0] * k * f + this.ox, v[1] * ky, v[2] * k * f + this.oz]);
-    const ux = P[1][0] - P[0][0], uy = P[1][1] - P[0][1], uz = P[1][2] - P[0][2], vx = P[2][0] - P[0][0], vy = P[2][1] - P[0][1], vz = P[2][2] - P[0][2];
-    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
-    for (const v of P) { const i = this.n * 3; this.p[i] = v[0]; this.p[i + 1] = v[1]; this.p[i + 2] = v[2]; this.m[i] = nx; this.m[i + 1] = ny; this.m[i + 2] = nz; this.c[i] = col[0]; this.c[i + 1] = col[1]; this.c[i + 2] = col[2]; this.n++; }
+    let nx = 0, ny = 1, nz = 0;
+    if (!nA) {
+      const ux = P[1][0] - P[0][0], uy = P[1][1] - P[0][1], uz = P[1][2] - P[0][2], vx = P[2][0] - P[0][0], vy = P[2][1] - P[0][1], vz = P[2][2] - P[0][2];
+      nx = uy * vz - uz * vy; ny = uz * vx - ux * vz; nz = ux * vy - uy * vx; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+    }
+    for (let idx = 0; idx < 3; idx++) {
+      const v = P[idx], nm = nA ? (idx === 0 ? nA : idx === 1 ? nB : nC) : [nx, ny, nz];
+      const i = this.n * 3;
+      this.p[i] = v[0]; this.p[i + 1] = v[1]; this.p[i + 2] = v[2];
+      this.m[i] = nm[0]; this.m[i + 1] = nm[1]; this.m[i + 2] = nm[2];
+      this.c[i] = col[0]; this.c[i + 1] = col[1]; this.c[i + 2] = col[2];
+      this.n++;
+    }
   }
   quad(a, b, c, d, col) { this.tri(a, b, c, col); this.tri(a, c, d, col); }
   note(cx, y0, cz, w, y1, d) { // anything at car height, in world space, for driving
@@ -122,7 +132,7 @@ function lotFor(r) {
 }
 const CIVIC = [{ kind: 'police', k: -2, side: -1, i: -10 }, { kind: 'hospital', k: -2, side: -1, i: 9 }, { kind: 'fire', k: 4, side: -1, i: -5 }]; // all three face the camera's usual direction
 for (const c of CIVIC) { c.lot = slots.find(s => s.k === c.k && s.side === c.side && s.i === c.i); taken.add(c.lot); taken.add(slots.find(s => s.k === c.k && s.side === c.side && s.i === c.i + 1)); }
-const MALL = { x: 0, z: -612, W: 112, D: 52, front: -586 }; const mallBlock = new Set(slots.filter(s => Math.abs(s.x) < 92 && Math.abs(s.z) > 548 && Math.abs(s.z) < 660 && (s.z > 0 || Math.abs(s.x) < 84))); // the Dream Mall's block, beyond the last resident. Kept out of `taken` on purpose: its size decides one resident's lot
+const MALL = { x: 0, z: -612, W: 112, D: 52, front: -586 }; const mallBlock = new Set(slots.filter(s => Math.abs(s.x) < 92 && Math.abs(s.z) > 548 && Math.abs(s.z) < 660 && (s.z > 0 || Math.abs(s.x) < 84))); // the Cloud Mall's block, beyond the last resident. Kept out of `taken` on purpose: its size decides one resident's lot
 const houses = residents.map((r, idx) => {
   const s = lotFor(r); taken.add(s);
   return { id: idx + 1, nick: r.n, key: r.n.toLowerCase(), alias: (r.a || '').toLowerCase(), lvl: clamp(r.lvl || 1, 1, 3), h: hash(r.n), wish: r.wish, tint: r.tint, style: r.style, claimed: !!r.claimed, followed: !!r.f, yard: s.yard, ...addr(s) };
@@ -145,34 +155,114 @@ function height(x, z) {
 }
 
 /* ---------- renderer and scene ---------- */
-const canvas = $('c');
-let renderer;
-try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }); }
-catch { document.body.insertAdjacentHTML('beforeend', '<div id="err">This device could not start 3D graphics. Try another browser.</div>'); if (window.bootDone) window.bootDone(); return; }
+let canvas = $('c');
+let renderer = null;
+
+function createRenderer(cvs) {
+  const configs = [
+    { canvas: cvs, antialias: true, powerPreference: 'default' },
+    { canvas: cvs, antialias: true },
+    { canvas: cvs, antialias: false, powerPreference: 'default' },
+    { canvas: cvs, antialias: false },
+    { canvas: cvs, antialias: false, precision: 'mediump' },
+    { canvas: cvs }
+  ];
+  for (const cfg of configs) {
+    try {
+      const r = new THREE.WebGLRenderer(cfg);
+      if (r && r.getContext()) return r;
+    } catch {}
+  }
+  const gl = cvs.getContext('webgl2') || cvs.getContext('webgl') || cvs.getContext('experimental-webgl');
+  if (gl) {
+    try {
+      const r = new THREE.WebGLRenderer({ canvas: cvs, context: gl });
+      if (r && r.getContext()) return r;
+    } catch {}
+  }
+  return null;
+}
+
+renderer = createRenderer(canvas);
+if (!renderer && canvas && canvas.parentNode) {
+  // If context was lost or stuck, replace canvas DOM element and retry
+  const freshCanvas = document.createElement('canvas');
+  freshCanvas.id = 'c';
+  freshCanvas.tabIndex = 0;
+  freshCanvas.setAttribute('aria-label', canvas.getAttribute('aria-label') || '');
+  canvas.parentNode.replaceChild(freshCanvas, canvas);
+  canvas = freshCanvas;
+  renderer = createRenderer(canvas);
+}
+
+if (!renderer) {
+  console.error('WebGL is unavailable on this device.');
+  document.body.insertAdjacentHTML('beforeend', '<div id="err">This device could not start 3D graphics. Try another browser or enable hardware acceleration.</div>');
+  if (window.bootDone) window.bootDone();
+  return;
+}
+
 const PHONE = innerWidth < 760 || matchMedia('(pointer: coarse)').matches;
 for (const g of ['gesturestart', 'gesturechange']) document.addEventListener(g, e => e.preventDefault(), { passive: false }); // a pinch moves the camera, it never zooms the page and blurs the picture
 document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-let maxRatio = PHONE ? 2 : 2; // phones get a lighter picture from the start, and slow devices step down further while running
-renderer.setPixelRatio(Math.min(devicePixelRatio, maxRatio));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+let maxRatio = PHONE ? 1.5 : 2; // phones get a lighter picture from the start, and slow devices step down further while running
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, maxRatio));
+
+try {
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+} catch {}
+try {
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+} catch {}
+
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xbfe0ee, townR * 2.2, townR + 1600);
 const camera = new THREE.PerspectiveCamera(42, 1, 1, townR + 1900);
-const hemi = new THREE.HemisphereLight(0xffffff, 0x8f8a5e, 1);
-const sun = new THREE.DirectionalLight(0xffffff, 2.4);
-sun.castShadow = true; sun.shadow.mapSize.set(PHONE ? 1024 : 2048, PHONE ? 1024 : 2048); sun.shadow.bias = -.0006; sun.shadow.normalBias = .4;
+const hemi = new THREE.HemisphereLight(0xffffff, 0x8f8a5e, 1.15);
+const sun = new THREE.DirectionalLight(0xffffff, 2.6);
+const maxTex = (renderer.capabilities && renderer.capabilities.maxTextureSize) || 2048;
+const shadowRes = Math.min(maxTex, PHONE ? 1024 : 1536);
+sun.castShadow = true; sun.shadow.mapSize.set(shadowRes, shadowRes);
+sun.shadow.bias = -.0004; sun.shadow.normalBias = .06; sun.shadow.radius = 2.0;
 scene.add(hemi, sun, sun.target);
-const solid = new THREE.MeshLambertMaterial({ vertexColors: true });
+
+// PBR Physically-Based Rendering for all town geometry
+const solid = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.76, metalness: 0.12, flatShading: false });
 const glow = new THREE.MeshBasicMaterial({ color: 0x38505c });
 
 /* sky dome and water colours, updated with the time of day */
-const skyU = { top: { value: new THREE.Color('#6fb7e4') }, low: { value: new THREE.Color('#d7ecf2') } };
-const skyDome = new THREE.Mesh(new THREE.SphereGeometry(townR + 1700, 20, 12), new THREE.ShaderMaterial({ uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false, vertexShader: 'varying vec3 vD; void main() { vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }', fragmentShader: 'uniform vec3 top, low; varying vec3 vD; void main() { gl_FragColor = vec4(mix(low, top, pow(clamp(vD.y * 1.7, 0., 1.), .62)), 1.);\n#include <colorspace_fragment>\n}' }));
+const sunDir = new THREE.Vector3(.5, .8, .5).normalize();
+const skyU = { top: { value: new THREE.Color('#6fb7e4') }, low: { value: new THREE.Color('#d7ecf2') }, sunDir: { value: sunDir } };
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(townR + 1700, 32, 20), new THREE.ShaderMaterial({
+  uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
+  vertexShader: 'varying vec3 vD; void main() { vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+  fragmentShader: `uniform vec3 top, low, sunDir; varying vec3 vD;
+    void main() {
+      float h = clamp(vD.y * 1.5, 0., 1.);
+      vec3 c = mix(low, top, pow(h, .65));
+      float horizon = exp(-max(0., vD.y) * 4.) * .16;
+      c = mix(c, low * 1.06, horizon);
+      float sunDot = max(0., dot(vD, normalize(sunDir)));
+      c += vec3(1., .92, .8) * pow(sunDot, 14.) * .2;
+      gl_FragColor = vec4(c, 1.);
+      #include <colorspace_fragment>
+    }`
+}));
 skyDome.renderOrder = -10; skyDome.frustumCulled = false; scene.add(skyDome);
-const waterU = { t: { value: 0 }, light: { value: 1 }, deep: { value: new THREE.Color('#2b8cb0') }, shallow: { value: new THREE.Color('#79d2cc') }, sunC: { value: new THREE.Color('#ffffff') }, fogC: { value: new THREE.Color('#d7ecf2') }, fogNear: { value: 500 }, fogFar: { value: 1500 } };
-/* terrain */
+
+// Ambient IBL Environment map
+(() => {
+  try {
+    const e = new THREE.Scene(), m = new THREE.Mesh(new THREE.SphereGeometry(20, 24, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, vertexShader: 'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}', fragmentShader: 'varying vec3 p;void main(){float h=normalize(p).y;vec3 c=h<0.?vec3(.18,.22,.18):mix(vec3(.92,.95,1.),vec3(.38,.58,.84),smoothstep(0.,.65,h));gl_FragColor=vec4(c,1.);}' }));
+    e.add(m); const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(e, .04).texture; pm.dispose();
+  } catch {}
+})();
+
+const waterU = { t: { value: 0 }, light: { value: 1 }, deep: { value: new THREE.Color('#1a5c78') }, shallow: { value: new THREE.Color('#46a8b5') }, sunC: { value: new THREE.Color('#ffffff') }, fogC: { value: new THREE.Color('#d7ecf2') }, fogNear: { value: 500 }, fogFar: { value: 1500 }, sunDir: { value: sunDir } };
+/* terrain with smooth procedural vertex normals */
 (() => {
   const size = townR + 840, step = Math.max(6, size / 170), n = Math.ceil(2 * size / step), g = new Geo();
   const paint = (x, y, z, slope) => {
@@ -184,26 +274,58 @@ const waterU = { t: { value: 0 }, light: { value: 1 }, deep: { value: new THREE.
     const m = fbm(x / 120 + 7, z / 120 + 3, 2) * .5 + v * .5;
     return rgb(m > .6 ? '#a3c95f' : m > .53 ? '#92c057' : m > .46 ? '#82b551' : m > .39 ? '#74a94e' : '#689d4c');
   };
+  const normAt = (x, z) => {
+    const d = 2.0;
+    const nx = -(height(x + d, z) - height(x - d, z)) / (2 * d);
+    const nz = -(height(x, z + d) - height(x, z - d)) / (2 * d);
+    const l = Math.hypot(nx, 1, nz) || 1;
+    return [nx / l, 1 / l, nz / l];
+  };
   const H = new Float32Array((n + 1) * (n + 1));
-  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) H[j * (n + 1) + i] = height(-size + i * step, -size + j * step);
+  const N = new Array((n + 1) * (n + 1));
+  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
+    const idx = j * (n + 1) + i, px = -size + i * step, pz = -size + j * step;
+    H[idx] = height(px, pz);
+    N[idx] = normAt(px, pz);
+  }
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const x = -size + i * step, z = -size + j * step, X = x + step, Z = z + step;
-    const a = H[j * (n + 1) + i], b = H[j * (n + 1) + i + 1], c = H[(j + 1) * (n + 1) + i], d = H[(j + 1) * (n + 1) + i + 1];
+    const idx0 = j * (n + 1) + i, idx1 = j * (n + 1) + i + 1, idx2 = (j + 1) * (n + 1) + i, idx3 = (j + 1) * (n + 1) + i + 1;
+    const a = H[idx0], b = H[idx1], c = H[idx2], d = H[idx3];
+    const na = N[idx0], nb = N[idx1], nc = N[idx2], nd = N[idx3];
     const col1 = paint(x + step / 3, (a + b + c) / 3, z + step / 3, Math.max(Math.abs(a - b), Math.abs(a - c)) / step);
     const col2 = paint(X - step / 3, (b + c + d) / 3, Z - step / 3, Math.max(Math.abs(d - b), Math.abs(d - c)) / step);
-    g.tri([x, a, z], [x, c, Z], [X, b, z], col1);
-    g.tri([X, b, z], [x, c, Z], [X, d, Z], col2);
+    g.tri([x, a, z], [x, c, Z], [X, b, z], col1, na, nc, nb);
+    g.tri([X, b, z], [x, c, Z], [X, d, Z], col2, nb, nc, nd);
   }
   const m = g.mesh(solid); m.receiveShadow = true; scene.add(m);
-  const w = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: 'varying vec3 vP; void main() { vec4 p = modelMatrix * vec4(position, 1.); vP = p.xyz; gl_Position = projectionMatrix * viewMatrix * p; }',
-    fragmentShader: `uniform float t, light, fogNear, fogFar; uniform vec3 deep, shallow, sunC, fogC; varying vec3 vP;
-      void main() { float rz = 84. + 15. * sin(vP.x / 62.) + 6. * sin(vP.x / 23. + 1.), d = abs(vP.z - rz);
-        vec3 c = mix(deep, shallow, smoothstep(5., 19., d)) * light;
-        float near = 1. - smoothstep(120., 520., distance(vP, cameraPosition)), n = sin(vP.x * .55 + t * .8 + 2. * sin(vP.z * .9)) * sin(vP.z * 2.6 - t * .6 + 1.4 * sin(vP.x * .3));
-        c += smoothstep(.78, .99, n) * sunC * .2 * light * near;
-        gl_FragColor = vec4(mix(c, fogC, smoothstep(fogNear, fogFar, distance(vP, cameraPosition))), 1.);
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), new THREE.ShaderMaterial({
+    uniforms: waterU,
+    vertexShader: 'varying vec3 vP; void main() { vec4 p = modelMatrix * vec4(position, 1.); vP = p.xyz; gl_Position = projectionMatrix * viewMatrix * p; }',
+    fragmentShader: `uniform float t, light, fogNear, fogFar; uniform vec3 deep, shallow, sunC, fogC, sunDir; varying vec3 vP;
+      void main() {
+        float rz = 84. + 15. * sin(vP.x / 62.) + 6. * sin(vP.x / 23. + 1.), d = abs(vP.z - rz);
+        float depth = smoothstep(2., 18., d);
+        vec3 base = mix(deep, shallow, depth) * light;
+        float w1 = sin(vP.x * .42 + t * 1.6 + sin(vP.z * .65)) * .5 + .5;
+        float w2 = sin(vP.z * 1.5 - t * 1.1 + 1.3 * sin(vP.x * .35)) * .5 + .5;
+        float w3 = sin((vP.x + vP.z) * 1.1 + t * 2.2) * .5 + .5;
+        vec3 N = normalize(vec3(cos(vP.x * .42 + t * 1.6) * .12, 1., cos(vP.z * 1.5 - t * 1.1) * .12));
+        vec3 V = normalize(cameraPosition - vP);
+        vec3 L = normalize(sunDir);
+        vec3 H = normalize(L + V);
+        float spec = pow(max(0., dot(N, H)), 48.);
+        float dist = distance(vP, cameraPosition);
+        float near = 1. - smoothstep(70., 650., dist);
+        float fresnel = pow(clamp(1. - max(0., dot(vec3(0., 1., 0.), V)), 0., 1.), 3.);
+        vec3 c = mix(base, shallow * 1.15 + vec3(.12, .18, .22), fresnel * .6);
+        c += spec * sunC * .65 * light * near;
+        float foam = smoothstep(18.2, 19.6, d) * (.6 + .4 * sin(vP.x * 2.8 + t * 2.));
+        c = mix(c, vec3(.94, .97, .99), foam * .5 * near);
+        gl_FragColor = vec4(mix(c, fogC, smoothstep(fogNear, fogFar, dist)), 1.);
         #include <colorspace_fragment>
-      }` }));
+      }`
+  }));
   w.rotation.x = -Math.PI / 2; w.position.y = -1.25; scene.add(w);
 })();
 
@@ -753,10 +875,10 @@ const glowCv = document.createElement('canvas'); glowCv.width = glowCv.height = 
 const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(15, 15).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffc46e, map: new THREE.CanvasTexture(glowCv), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), lampSpots.length);
 { const M = new THREE.Matrix4(); lampSpots.forEach(([x, z], i) => { M.makeTranslation(x, .17, z); pools.setMatrixAt(i, M); }); pools.frustumCulled = false; pools.renderOrder = 2; pools.visible = false; scene.add(pools); }
 CIVIC.forEach(civic);
-/* ---------- the Dream Mall: a real building site. Likes from visitors move it through five stages ---------- */
+/* ---------- the Cloud Mall: a real building site. Likes from visitors move it through five stages ---------- */
 const mallG = new THREE.Group(), mallSpin = [], mallSteps = CFG.mall.steps, mallNames = ['Ground works', 'Foundations', 'Concrete floors', 'Glass walls', 'Roof and dome', 'Grand opening'], mallLikes = () => Number(live.mall) || 0, mallStage = n => mallSteps.filter(s => n >= s).length; scene.add(mallG); let mallBuilt = -1, mallBoard = null;
 function mallSign(w, h, paint) { const c = document.createElement('canvas'); c.width = Math.round(w * 40); c.height = Math.round(h * 40); paint(c.getContext('2d'), c.width, c.height); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide })); m.userData.redraw = p => { p(c.getContext('2d'), c.width, c.height); t.needsUpdate = true; }; return m; }
-function drawBoard() { if (mallBoard) mallBoard.userData.redraw((x, w, h) => { const n = mallLikes(), s = mallStage(n), next = mallSteps[s]; if (!next) { x.fillStyle = '#c8352b'; x.fillRect(0, 0, w, h); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `800 ${h * .72}px system-ui`; x.fillText('DREAM MALL', w / 2, h * .54); return; } x.fillStyle = '#17302a'; x.fillRect(0, 0, w, h); x.strokeStyle = '#f2c14e'; x.lineWidth = 12; x.strokeRect(8, 8, w - 16, h - 16); x.fillStyle = '#f2c14e'; x.textAlign = 'center'; x.font = `800 ${h * .3}px system-ui`; x.fillText('DREAM MALL', w / 2, h * .36); x.fillStyle = '#fff'; x.font = `700 ${h * .17}px system-ui`; x.fillText(next ? `STAGE ${s} OF 5` : 'NOW OPEN', w / 2, h * .6); x.fillText(next ? `${n} OF ${next} LIKES` : `${n} LIKES`, w / 2, h * .82); }); }
+function drawBoard() { if (mallBoard) mallBoard.userData.redraw((x, w, h) => { const n = mallLikes(), s = mallStage(n), next = mallSteps[s]; if (!next) { x.fillStyle = '#c8352b'; x.fillRect(0, 0, w, h); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `800 ${h * .72}px system-ui`; x.fillText('CLOUD MALL', w / 2, h * .54); return; } x.fillStyle = '#17302a'; x.fillRect(0, 0, w, h); x.strokeStyle = '#f2c14e'; x.lineWidth = 12; x.strokeRect(8, 8, w - 16, h - 16); x.fillStyle = '#f2c14e'; x.textAlign = 'center'; x.font = `800 ${h * .3}px system-ui`; x.fillText('CLOUD MALL', w / 2, h * .36); x.fillStyle = '#fff'; x.font = `700 ${h * .17}px system-ui`; x.fillText(next ? `STAGE ${s} OF 5` : 'NOW OPEN', w / 2, h * .6); x.fillText(next ? `${n} OF ${next} LIKES` : `${n} LIKES`, w / 2, h * .82); }); }
 function buildMall(stage) { if (stage === mallBuilt) return; mallBuilt = stage; for (const o of [...mallG.children]) { mallG.remove(o); o.traverse(q => { if (q.geometry) q.geometry.dispose(); if (q.material && q.material.map) { q.material.map.dispose(); q.material.dispose(); } }); } mallSpin.length = 0;
   const g = new Geo(), L = new Geo(), { x: cx, z: cz, W, D, front: fz } = MALL, C = '#bdb9af', C2 = '#a8a49b', steel = '#d4a12d', glass = '#5f93ab', clad = '#ece6da', asphalt = '#4c5157', open = stage >= 5, floors = [0, 1, 2, 3, 3, 3][stage], top = 1 + floors * 6;
   g.box(cx, .04, -601, 130, .08, 98, open ? '#8f9a7c' : '#8d7350');
@@ -776,7 +898,7 @@ function buildMall(stage) { if (stage === mallBuilt) return; mallBuilt = stage; 
   const mm = g.mesh(solid); mm.castShadow = mm.receiveShadow = true; mallG.add(mm); if (L.n) mallG.add(L.mesh(glow));
   mallBoard = mallSign(open ? 44 : 30, open ? 5 : 12, () => {}); if (open) { mallBoard.position.set(cx, top - 2.6, fz + .6); mallG.add(mallBoard); } else { mallBoard.position.set(cx, 11, -556); mallG.add(mallBoard); for (const s of [-1, 1]) { const p = new Geo(); p.box(cx + s * 13, 0, -556.3, .5, 17, .5, '#5a3a24'); mallG.add(p.mesh(solid)); } } drawBoard(); }
 buildMall(mallStage(mallLikes()));
-/* the Dream City Defence Base, south of the last street: walls, towers, hangar, helipad, tanks */
+/* the Cloud City Defence Base, south of the last street: walls, towers, hangar, helipad, tanks */
 const BASE = { x: 0, z: 612, W: 168, D: 104 }, baseG = new THREE.Group(), baseGuns = []; scene.add(baseG);
 {
   const g = new Geo(), w = new Geo(), { x: cx, z: cz, W, D } = BASE, O = '#5f6d45', O2 = '#4d5a39', S = '#b6a884', C = '#9b9a90', K = '#2c3129', R = '#c8352b', hw = W / 2, hd = D / 2, gate = 12;
@@ -800,7 +922,7 @@ const BASE = { x: 0, z: 612, W: 168, D: 104 }, baseG = new THREE.Group(), baseGu
   for (const [x, z] of [[-14, 30], [-9, 34], [-18, 36], [-4, 40]]) { g.box(cx + x, 0, cz + z, 3, 2.4, 3, '#6d5a36'); g.box(cx + x, 2.4, cz + z, 3.1, .25, 3.1, '#4e3f26'); }
   g.box(cx, 0, cz + 8, .35, 20, .35, '#d9d9d2'); g.box(cx + 3, 16.6, cz + 8, 6, 3.4, .1, R); g.box(cx + 3, 17.8, cz + 8, 6, 1, .12, '#f3f1e6');
   const m = g.mesh(solid); m.castShadow = m.receiveShadow = true; baseG.add(m); if (w.n) baseG.add(w.mesh(glow));
-  const sign = mallSign(26, 5, (x, W2, H2) => { x.fillStyle = '#23302b'; x.fillRect(0, 0, W2, H2); x.strokeStyle = '#d6b13c'; x.lineWidth = 12; x.strokeRect(10, 10, W2 - 20, H2 - 20); x.fillStyle = '#f6c81e'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `800 ${H2 * .46}px system-ui`; x.fillText((CFG.name || 'DREAM CITY').toUpperCase() + ' BASE', W2 / 2, H2 * .54); }); sign.position.set(cx, 9.5, cz - hd - .1); sign.rotation.y = Math.PI; baseG.add(sign); { const q = new Geo(); for (const a of [-11, 11]) q.box(cx + a, 5.5, cz - hd - .1, .5, 7, .5, O2); baseG.add(q.mesh(solid)); }
+  const sign = mallSign(26, 5, (x, W2, H2) => { x.fillStyle = '#23302b'; x.fillRect(0, 0, W2, H2); x.strokeStyle = '#d6b13c'; x.lineWidth = 12; x.strokeRect(10, 10, W2 - 20, H2 - 20); x.fillStyle = '#f6c81e'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `800 ${H2 * .46}px system-ui`; x.fillText((CFG.name || 'CLOUD CITY').toUpperCase() + ' BASE', W2 / 2, H2 * .54); }); sign.position.set(cx, 9.5, cz - hd - .1); sign.rotation.y = Math.PI; baseG.add(sign); { const q = new Geo(); for (const a of [-11, 11]) q.box(cx + a, 5.5, cz - hd - .1, .5, 7, .5, O2); baseG.add(q.mesh(solid)); }
   // tanks: body and turret apart, so the turret can aim
   const tank = (x, z, ry) => { const r = new THREE.Group(), b = new Geo(); for (const s of [-1, 1]) { b.box(0, 0, s * 1.75, 8.4, 1.2, 1.1, K); for (let i = 0; i < 7; i++) b.add(new THREE.CylinderGeometry(.5, .5, 1.14, 10).rotateX(Math.PI / 2), '#3f463c', -3.4 + i * 1.13, .55, s * 1.75); } b.box(0, 1.1, 0, 8, 1.2, 3.6, O); b.box(3.4, 1, 0, 1.6, .9, 3.4, O2); const mb = b.mesh(solid); mb.castShadow = true; r.add(mb); const t = new THREE.Group(), q = new Geo(); q.box(0, 0, 0, 4, 1.2, 3, O2); q.box(-.6, 1.2, .6, .9, .4, .9, K); q.add(new THREE.CylinderGeometry(.2, .24, 6, 10).rotateZ(Math.PI / 2), K, 4.7, .6, 0); q.add(new THREE.CylinderGeometry(.3, .3, .8, 10).rotateZ(Math.PI / 2), K, 7.6, .6, 0); const mt = q.mesh(solid); mt.castShadow = true; t.add(mt); t.position.y = 2.3; r.add(t); const f = new THREE.Mesh(new THREE.SphereGeometry(1.4, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffd768' })); f.position.set(8.8, .6, 0); f.visible = false; t.add(f); r.position.set(x, 0, z); r.rotation.y = ry; baseG.add(r); baseGuns.push({ root: r, turret: t, flash: f }); };
   tank(cx - 20, cz - 34, Math.PI / 2); tank(cx + 20, cz - 34, Math.PI / 2); tank(cx - 34, cz - 10, Math.PI / 2 + .1); tank(cx + 14, cz - 6, Math.PI / 2 - .2);
@@ -1172,8 +1294,8 @@ const boardCv = document.createElement('canvas'); boardCv.width = 512; boardCv.h
 const boardTx = new THREE.CanvasTexture(boardCv); boardTx.colorSpace = THREE.SRGBColorSpace; boardTx.anisotropy = 4;
 const board = new THREE.Group();
 const boardFace = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.97), new THREE.MeshBasicMaterial({ map: boardTx, side: THREE.DoubleSide })); boardFace.position.y = 2.7; boardFace.position.z = .1;
-const boardBack = new THREE.Mesh(new THREE.BoxGeometry(6.2, 2.15, .15), new THREE.MeshLambertMaterial({ color: 0x4f2f1c })); boardBack.position.y = 2.7;
-const post = new THREE.Mesh(new THREE.BoxGeometry(.3, 1.8, .3), new THREE.MeshLambertMaterial({ color: 0x4f2f1c })); post.position.y = .9;
+const boardBack = new THREE.Mesh(new THREE.BoxGeometry(6.2, 2.15, .15), new THREE.MeshStandardMaterial({ color: 0x4f2f1c, roughness: .85 })); boardBack.position.y = 2.7;
+const post = new THREE.Mesh(new THREE.BoxGeometry(.3, 1.8, .3), new THREE.MeshStandardMaterial({ color: 0x4f2f1c, roughness: .85 })); post.position.y = .9;
 board.add(boardFace, boardBack, post); board.visible = false; board.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(board);
 function setBoard(h) {
   const x = boardCv.getContext('2d'); paintWood(x, 512, 168, '#9a6a3c', 3, h.h & 1023); x.strokeStyle = '#3a2616'; x.lineWidth = 10; x.strokeRect(5, 5, 502, 158);
@@ -1217,11 +1339,12 @@ function applyTime(t) {
   sun.intensity *= 1 - wet * .62;
   const day = (t - 6) / 13.5, s = day > 0 && day < 1 ? day : .5, el = day > 0 && day < 1 ? Math.max(.22, Math.sin(s * Math.PI) * .95) : .8;
   sunDir.set(Math.cos(s * Math.PI) * 1, el, .55).normalize();
+  if (waterU.sunDir) waterU.sunDir.value.copy(sunDir);
+  if (skyU.sunDir) skyU.sunDir.value.copy(sunDir);
   const hh = Math.floor(t), mm = Math.floor((t - hh) * 60), ph = t < 5.5 || t >= 21 ? 'Night' : t < 11 ? 'Morning' : t < 17.5 ? 'Day' : 'Evening', h12 = hh % 12 || 12, ampm = hh < 12 ? 'AM' : 'PM';
   $('clock').textContent = `${h12}:${String(mm).padStart(2, '0')} ${ampm} ET \u00B7 ${ph}${manual === null ? '' : ' \u00B7 manual'}`;
   $('wx').textContent = `${wantRain() ? 'Rain' : 'Dry'}${wxMode === 'auto' ? '' : ' \u00B7 manual'}`;
 }
-const sunDir = new THREE.Vector3(.5, .8, .5);
 
 /* rain: a box of streaks that follows the view */
 const DROPS = innerWidth < 600 ? 700 : 1300, dropSeed = new Float32Array(DROPS * 3), dropPos = new Float32Array(DROPS * 6);
@@ -1259,7 +1382,7 @@ function placeCamera() {
   }
   { const nr = stroll.on ? .4 : drive.on ? 1 : clamp(view.d * .08, 1, 90); if (Math.abs(camera.near - nr) > nr * .12) { camera.near = nr; camera.updateProjectionMatrix(); } } // the nearer the near plane is to the town, the less the road layers fight each other
   const s = 50 * 1.12 ** Math.ceil(Math.log(clamp(view.d * .85, 50, 340) / 50) / Math.log(1.12)); // shadow scale moves in steps, so zooming does not make shadows swim
-  const cam = sun.shadow.camera; if (cam.right !== s) { cam.left = -s; cam.right = s; cam.top = s; cam.bottom = -s; cam.far = s * 6; cam.updateProjectionMatrix(); }
+  const cam = sun.shadow.camera; if (cam.right !== s) { cam.left = -s; cam.right = s; cam.top = s; cam.bottom = -s; cam.near = 1; cam.far = s * 6; cam.updateProjectionMatrix(); }
   { const tex = 2 * s / sun.shadow.mapSize.x; shR.crossVectors(shU.set(0, 1, 0), sunDir).normalize(); shU.crossVectors(sunDir, shR); shT.set(view.x, 0, view.z); const a = Math.round(shT.dot(shR) / tex) * tex, b = Math.round(shT.dot(shU) / tex) * tex, c = shT.dot(sunDir); sun.target.position.set(0, 0, 0).addScaledVector(shR, a).addScaledVector(shU, b).addScaledVector(sunDir, c); } // shadows step on whole texels, so they stay still while the camera pans
   sun.position.copy(sun.target.position).addScaledVector(sunDir, s * 3);
 }
@@ -1267,8 +1390,15 @@ function resize() { const w = innerWidth, h = viewH(); renderer.setSize(w, h, fa
 addEventListener('resize', resize); resize();
 
 const ptrs = new Map(); let drag = null, gest = null;
+const panInertia = { vx: 0, vz: 0, vyaw: 0, vpitch: 0 };
 const bounds = () => { const R = townR + 20, l = Math.hypot(goal.x, goal.z); if (l > R) { goal.x *= R / l; goal.z *= R / l; } goal.d = clamp(goal.d, 22, clamp(townR * 2.4, 420, 1000)); goal.pitch = clamp(goal.pitch, .2, 1.42); };
-canvas.addEventListener('pointerdown', e => { if (drive.on) return; if (stroll.on) { canvas.setPointerCapture(e.pointerId); stroll.drag = { x: e.clientX, y: e.clientY, moved: 0 }; return; } canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, moved: 0, rot: e.button === 2 || e.shiftKey }; gest = null; });
+canvas.addEventListener('pointerdown', e => {
+  if (drive.on) return;
+  if (stroll.on) { canvas.setPointerCapture(e.pointerId); stroll.drag = { x: e.clientX, y: e.clientY, moved: 0 }; return; }
+  canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  drag = { x: e.clientX, y: e.clientY, moved: 0, rot: e.button === 2 || e.shiftKey }; gest = null;
+  panInertia.vx = panInertia.vz = panInertia.vyaw = panInertia.vpitch = 0;
+});
 canvas.addEventListener('pointermove', e => {
   if (!ptrs.has(e.pointerId)) return;
   const prev = ptrs.get(e.pointerId), dx = e.clientX - prev[0], dy = e.clientY - prev[1]; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
@@ -1280,8 +1410,20 @@ canvas.addEventListener('pointermove', e => {
   }
   if (!drag) return;
   drag.moved += Math.abs(dx) + Math.abs(dy);
-  if (drag.rot) { goal.yaw -= dx * .006; goal.pitch += dy * .004; }
-  else { const k = view.d * .0021, s = Math.sin(view.yaw), c = Math.cos(view.yaw); goal.x -= (dx * c + dy * s / Math.max(.35, Math.sin(view.pitch))) * k; goal.z -= (-dx * s + dy * c / Math.max(.35, Math.sin(view.pitch))) * k; }
+  if (drag.rot) {
+    const dyaw = -dx * .0055, dpitch = dy * .0035;
+    goal.yaw += dyaw; goal.pitch += dpitch;
+    panInertia.vyaw = panInertia.vyaw * .35 + dyaw * .65;
+    panInertia.vpitch = panInertia.vpitch * .35 + dpitch * .65;
+  }
+  else {
+    const k = view.d * .0021, s = Math.sin(view.yaw), c = Math.cos(view.yaw);
+    const px = -(dx * c + dy * s / Math.max(.35, Math.sin(view.pitch))) * k;
+    const pz = -(-dx * s + dy * c / Math.max(.35, Math.sin(view.pitch))) * k;
+    goal.x += px; goal.z += pz;
+    panInertia.vx = panInertia.vx * .35 + px * .65;
+    panInertia.vz = panInertia.vz * .35 + pz * .65;
+  }
   bounds();
 });
 const up = e => {
@@ -1290,7 +1432,12 @@ const up = e => {
 };
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); drag = null; gest = null; });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-canvas.addEventListener('wheel', e => { e.preventDefault(); if (room.on || drive.on) return; if (stroll.on) { stroll.dist = clamp(stroll.dist * Math.exp(e.deltaY * .0012), 3.2, 16); return; } goal.d *= Math.exp(e.deltaY * .0012); bounds(); }, { passive: false });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (room.on || drive.on) return;
+  if (stroll.on) { stroll.dist = clamp(stroll.dist * Math.exp(clamp(e.deltaY, -100, 100) * .001), 3.2, 16); return; }
+  goal.d *= Math.exp(clamp(e.deltaY, -100, 100) * .0009); bounds();
+}, { passive: false });
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -3), hit = new THREE.Vector3();
 function tap(cx, cy) {
   if (tapPerson(cx, cy)) return;
@@ -1331,7 +1478,7 @@ const pop = houses.length.toLocaleString('en-US');
 const TOWN_GOAL = 10000, scoreboard = (() => {
   const n = houses.length, left = Math.max(0, TOWN_GOAL - n), share = Math.min(1, n / TOWN_GOAL), paint = (x, w, h) => {
     x.fillStyle = '#17302a'; x.fillRect(0, 0, w, h); x.strokeStyle = '#f2c14e'; x.lineWidth = 14; x.strokeRect(14, 14, w - 28, h - 28); x.textAlign = 'center'; x.textBaseline = 'middle'; const f = s => `400 ${s}px 'Lilita One', 'Arial Black', system-ui, sans-serif`;
-    x.fillStyle = '#fff'; x.font = f(h * .1); x.fillText((CFG.name || 'DREAM CITY').toUpperCase() + ' RESIDENTS', w / 2, h * .15); x.fillStyle = '#f6c81e'; x.font = f(h * .36); x.fillText(n.toLocaleString('en-US'), w / 2, h * .42);
+    x.fillStyle = '#fff'; x.font = f(h * .1); x.fillText((CFG.name || 'CLOUD CITY').toUpperCase() + ' RESIDENTS', w / 2, h * .15); x.fillStyle = '#f6c81e'; x.font = f(h * .36); x.fillText(n.toLocaleString('en-US'), w / 2, h * .42);
     const bx = w * .09, by = h * .68, bw = w * .82, bh = h * .09; x.fillStyle = '#0d1f1a'; x.fillRect(bx, by, bw, bh); x.fillStyle = '#7fd66a'; x.fillRect(bx + 4, by + 4, Math.max(8, (bw - 8) * share), bh - 8);
     x.fillStyle = '#fff'; x.font = f(h * .095); x.fillText(left ? `${left.toLocaleString('en-US')} TO GO UNTIL ${TOWN_GOAL.toLocaleString('en-US')}` : `${TOWN_GOAL.toLocaleString('en-US')} REACHED!`, w / 2, h * .87);
   }, m = mallSign(24, 13.5, paint), g = new Geo(), wx = 24, wz = -31; m.position.set(wx, 11.2, wz + .26); scene.add(m);
@@ -1379,7 +1526,7 @@ function selectPlot(p) {
   if (!s.claimText) { try { const cached = localStorage.getItem('DC_SETTINGS'); if (cached) s = { ...s, ...JSON.parse(cached) }; } catch {} }
   const enabled = s.claimEnabled !== undefined ? !!s.claimEnabled : true;
   const cText = s.claimText || 'Claim it on Instagram';
-  const cUrl = s.claimUrl || 'https://www.instagram.com/dreamcity/';
+  const cUrl = s.claimUrl || 'https://www.instagram.com/cloudcity/';
   const cDesc = s.claimDesc || 'Comment HOUSE under our latest post and your home goes up here.';
 
   $('cn').textContent = 'Free plot'; $('ca').textContent = `${p.num} ${p.street}`; $('cs').textContent = cDesc;
@@ -1420,7 +1567,7 @@ function claimSheet(prefill = '') {
     p.append(el('h2', '', inviter ? `Move in next to ${inviter.nick}` : 'Get your house'), el('p', '', 'Free. Your house goes up right now, with your name on the sign.'));
     const l = el('label', 'field', 'Your TikTok or Instagram nickname'), i = el('input'); i.id = 'claimNick'; i.value = prefill; i.maxLength = 30; i.autocapitalize = 'off'; i.spellcheck = false; l.append(i);
     const box = el('div', 'styles'); STYLES.forEach(([n, id]) => { const b = el('button', id === style ? 'on' : '', n); b.type = 'button'; b.onclick = () => { style = id; box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }; box.append(b); });
-    const w = el('label', 'field', 'Dream extras (optional)'), t = el('input'); t.id = 'claimWish'; t.maxLength = 120; t.placeholder = 'pool, tree house, giant cat...'; w.append(t);
+    const w = el('label', 'field', 'Cloud extras (optional)'), t = el('input'); t.id = 'claimWish'; t.maxLength = 120; t.placeholder = 'pool, tree house, giant cat...'; w.append(t);
     const go = el('button', 'btn', 'Build my house'), note = el('small', '', 'One house per person. By claiming, your nickname appears on this public site.'), cancel = el('button', 'btn ghost', 'Not now');
     cancel.onclick = closeSheet;
     go.onclick = async () => {
@@ -1444,9 +1591,9 @@ $('getHouse').onclick = () => claimSheet($('q').value.trim().replace(/^@/, ''));
 if (store.get('me') || !CFG.selfClaim || !store.get('ref')) $('getHouse').hidden = true;
 function followSheet(h) {
   openSheet(p => {
-    p.append(el('h2', '', 'Open your door'), el('p', '', 'Follow Dream City on Instagram or TikTok, then come back here. One is enough.'));
+    p.append(el('h2', '', 'Open your door'), el('p', '', 'Follow Cloud City on Instagram or TikTok, then come back here. One is enough.'));
     let platform = ''; const done = el('button', 'btn', "I've followed"); done.hidden = true;
-    for (const [id, name, url] of [['instagram', 'Follow on Instagram', 'https://www.instagram.com/dreamcity/'], ['tiktok', 'Follow on TikTok', 'https://www.tiktok.com/@dreamcity']]) { const a = el('a', 'btn', name); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'display:block;text-align:center;text-decoration:none;margin-bottom:8px'; a.onclick = () => { platform = id; done.hidden = false; }; p.append(a); }
+    for (const [id, name, url] of [['instagram', 'Follow on Instagram', 'https://www.instagram.com/cloudcity/'], ['tiktok', 'Follow on TikTok', 'https://www.tiktok.com/@cloudcity']]) { const a = el('a', 'btn', name); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'display:block;text-align:center;text-decoration:none;margin-bottom:8px'; a.onclick = () => { platform = id; done.hidden = false; }; p.append(a); }
     done.onclick = async () => {
       done.disabled = true; let msg = 'Could not open it. Try again.';
       try { const r = await send('/api/follow', { nick: h.key, device: deviceId(), platform }); if (r.ok) { h.followed = true; closeSheet(); toast('Your door is open!'); select(h); return; } if (r.reason === 'invalid') msg = 'Open this on the phone you built your house with'; } catch {}
@@ -1555,7 +1702,7 @@ $('bStory').onclick = async () => {
   x.textAlign = 'center'; x.lineJoin = 'round'; x.font = '84px "Lilita One", Arial Black, sans-serif'; x.lineWidth = 12; x.strokeStyle = '#14201b'; x.strokeText('Come live next to me!', 540, 1330); x.fillStyle = '#fff'; x.fillText('Come live next to me!', 540, 1330);
   x.font = '800 40px Figtree, Arial, sans-serif'; x.fillStyle = 'rgba(20,32,27,.82)'; x.fillRect(150, 1616, 780, 66); x.fillStyle = '#f6c81e'; x.fillText(`Get your house: ${CFG.handle}`, 540, 1663); x.textAlign = 'left';
   const url = cv.toDataURL('image/jpeg', .9), inApp = /TikTok|musical_ly|Bytedance|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
-  const file = await new Promise(res => cv.toBlob(b => res(b ? new File([b], `dream-city-${h.key.replace(/[^a-z0-9]+/g, '-')}.jpg`, { type: 'image/jpeg' }) : null), 'image/jpeg', .9));
+  const file = await new Promise(res => cv.toBlob(b => res(b ? new File([b], `cloud-city-${h.key.replace(/[^a-z0-9]+/g, '-')}.jpg`, { type: 'image/jpeg' }) : null), 'image/jpeg', .9));
   const canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
   openSheet(p => {
     const im = el('img'); im.src = url; im.alt = `Story image of ${h.nick}'s house`; p.append(el('h2', '', 'Your Story is ready'), im);
@@ -1620,7 +1767,7 @@ const JOKES = [
   'Local marmot denies everything. Nobody has asked him anything yet.',
   'The Mayor asks residents to stop feeding cheese to the pigeons. The pigeons have hired a lawyer.',
   `Population now ${pop}. The line at the fountain is getting serious.`,
-  `Dream Mall: ${mallLikes()} likes so far. Every like adds another brick.`,
+  `Cloud Mall: ${mallLikes()} likes so far. Every like adds another brick.`,
   `${free} free plots left. The sheep have started looking at them.`,
   `The vote is open: ${voteOptions.join(', ')}. Tap the button below to have your say.`,
   ...((CFG.opened || []).includes('Bakery') ? ['The Bakery is open on the square. You voted for it, so the crumbs are your fault.'] : []),
@@ -2060,8 +2207,22 @@ let paused = false; // used only when recording video frames
 let slowN = 0, slowSum = 0;
 function loop(now) { if (!paused) drawFrame(now); requestAnimationFrame(loop); }
 function drawFrame(now) {
-  const real = Math.min(.5, (now - last) / 1000), dt = Math.min(.05, real); last = now; frame++;
-  const k = reduced ? 1 : 1 - Math.exp(-dt * 3.4); if (drive.on) stepDrive(dt); if (stroll.on) stepStroll(dt, now);
+  const real = Math.min(.066, (now - last) / 1000), dt = Math.min(.033, real); last = now; frame++;
+  if (!drag && !ptrs.size && !drive.on && !stroll.on) {
+    if (Math.hypot(panInertia.vx, panInertia.vz) > 0.005) {
+      goal.x += panInertia.vx; goal.z += panInertia.vz;
+      panInertia.vx *= 0.88; panInertia.vz *= 0.88;
+      bounds();
+    }
+    if (Math.abs(panInertia.vyaw) > 0.0001 || Math.abs(panInertia.vpitch) > 0.0001) {
+      goal.yaw += panInertia.vyaw; goal.pitch += panInertia.vpitch;
+      panInertia.vyaw *= 0.85; panInertia.vpitch *= 0.85;
+      bounds();
+    }
+  }
+  const followSpeed = drag ? 12.0 : 5.0;
+  const k = reduced ? 1 : 1 - Math.exp(-dt * followSpeed);
+  if (drive.on) stepDrive(dt); if (stroll.on) stepStroll(dt, now);
   for (const a of ['x', 'z', 'd', 'yaw', 'pitch', 'lift']) view[a] += (goal[a] - view[a]) * k;
   placeCamera(); skyDome.position.copy(camera.position); waterU.t.value = now / 1000;
   if (!paused && (slowN += 1) && (slowSum += real) && slowN >= 150) { if (slowSum / slowN > .05 && maxRatio > 1) { maxRatio = maxRatio > 1.3 ? 1.3 : 1; renderer.setPixelRatio(Math.min(devicePixelRatio, maxRatio)); resize(); sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } } slowN = slowSum = 0; } // a slow device drops to the lighter picture by itself
@@ -2129,7 +2290,7 @@ const hillSign = (() => {
     Z() { return [S([[0, 0], [.65, 0], [.65, .18], [.22, .82], [.65, .82], [.65, 1], [0, 1], [0, .82], [.43, .18], [0, .18]]), .65]; },
     _default() { return [S([[0, 0], [.5, 0], [.5, 1], [0, 1]]), .5]; }
   };
-  const H = 66, gap = .3, text = (CFG.name || 'Dream City').toUpperCase(), mat = new THREE.MeshLambertMaterial({ color: '#ffffff', emissive: '#fff4d6', emissiveIntensity: 0 }), back = new THREE.MeshLambertMaterial({ color: '#8b8d8c' }), root = new THREE.Group(); scene.add(root);
+  const H = 66, gap = .3, text = (CFG.name || 'Cloud City').toUpperCase(), mat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .45, metalness: .1, emissive: '#fff4d6', emissiveIntensity: 0 }), back = new THREE.MeshStandardMaterial({ color: '#8b8d8c', roughness: .7, metalness: .2 }), root = new THREE.Group(); scene.add(root);
   const dirA = Math.atan2(-Math.sin(.42), -Math.cos(.42)), ray = a => { for (let r = townR + 150; r < townR + 800; r += 6) if (height(Math.sin(a) * r, Math.cos(a) * r) > 70) return r; return townR + 500; };
   let total = 0; const parts = [...text].map(c => { if (c === ' ') { total += .55; return null; } const fn = shapes[c] || shapes._default; const [shape, w] = fn(); const it = { shape, w, at: total }; total += w + gap; return it; }).filter(Boolean); total -= gap;
   const R = ray(dirA) + 16, A = total * H / R;
@@ -2202,7 +2363,7 @@ const stepFront = (() => {
 function frontGo() { if (selected) clearSel(); front.at = (front.at + 1) % front.posts.length; const p = front.posts[front.at]; Object.assign(goal, { x: p.x + p.ox * 15, z: p.z + p.oz * 15, d: 36, pitch: .2, yaw: Math.atan2(-p.ox, -p.oz), lift: .05 }); }
 $('front').onclick = frontGo;
 
-/* ---------- the Dream Mall site is alive: builders and machines at work until the grand opening ---------- */
+/* ---------- the Cloud Mall site is alive: builders and machines at work until the grand opening ---------- */
 const stepSite = (() => {
   const root = new THREE.Group(); scene.add(root); const Y = '#e8b21f', K = '#2c2e2a', D = '#3a3f47', W = '#f2f0e8', mesh = g => { const m = g.mesh(solid); m.castShadow = true; return m; }, geo = () => new Geo().at(0, 0), at = (o, x, y, z) => { o.position.set(x, y, z); return o; };
   const excavator = (x, z, ry, tone = Y) => { const r = new THREE.Group(), lo = geo(); for (const s of [-1, 1]) { lo.box(0, .1, s * 1.45, 5.4, .95, .85, K); for (let i = -2; i <= 2; i++) lo.box(i * 1.05, .1, s * 1.9, .3, .95, .06, '#4a4d48'); } lo.box(0, 1, 0, 2.6, .35, 2.2, '#4a4d48'); r.add(mesh(lo));
@@ -2238,7 +2399,7 @@ const stepSite = (() => {
   };
 })();
 
-/* ---------- the locals: people you can tap, each with a short story of how they came to Dream City ---------- */
+/* ---------- the locals: people you can tap, each with a short story of how they came to Cloud City ---------- */
 const people = (() => {
   const lot = k => CIVIC.find(c => c.kind === k).lot, door = (l, off) => { const f = l.side > 0 ? -1 : 1; return [l.x + 6.5 + off, l.z + 6.6 * f, 0, f]; }, p0 = front.posts[0], SK = ['#e8bd9a', '#c98f62', '#8d5a3a', '#f0ceb0'];
   const list = [
@@ -2252,7 +2413,7 @@ const people = (() => {
     { name: 'Sam', role: 'Bus driver', at: [34, 25, 0, -1], skin: 1, tall: 1, top: '#c8352b', legs: '#23262f', hat: '#23262f', trim: '#ffffff', story: "I came here to start again after losing my job. They gave me a bus and a street map, and the map changes every day because new people keep arriving. Best job I ever had." },
     { name: 'Sergeant Cole', role: 'The army', at: [p0.x - p0.ox * 6.5 - p0.tx * 2, p0.z - p0.oz * 6.5 - p0.tz * 2, p0.ox, p0.oz], skin: 2, top: '#5a6a45', legs: '#46533a', hat: '#46533a', trim: '#2c3129', story: "They sent us for one night. I have not slept since. I stay because of the lights in the windows behind me. Every one of those houses belongs to someone. Nearly there. Hold the line." },
   ];
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .7, metalness: .1 });
   for (const c of list) {
     const b = new Geo().at(0, 0), a = new Geo().at(0, 0), sk = SK[c.skin], [x, z, fx, fz] = c.at; b.sc = a.sc = 1.3; b.sy = a.sy = 1.3;
     for (const s of [-1, 1]) { b.box(s * .16, 0, .03, .23, .15, .36, '#1b1c1e'); b.box(s * .16, .14, 0, .23, .72, .26, c.legs); }
@@ -2318,7 +2479,7 @@ function carHit(x, z, co, si, hl, hw) { // the true outline of the car against e
   return false;
 }
 const carEnv = () => { if (drive.env) return drive.env; const e = new THREE.Scene(), m = new THREE.Mesh(new THREE.SphereGeometry(20, 16, 10), new THREE.ShaderMaterial({ side: THREE.BackSide, vertexShader: 'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}', fragmentShader: 'varying vec3 p;void main(){float h=normalize(p).y;vec3 c=h<0.?vec3(.2,.21,.19):mix(vec3(.95,.97,1.),vec3(.42,.6,.85),smoothstep(0.,.6,h));gl_FragColor=vec4(c,1.);}' })); e.add(m); const pm = new THREE.PMREMGenerator(renderer); drive.env = pm.fromScene(e, .02).texture; pm.dispose(); return drive.env; };
-function carScript() { return window.DreamCars ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'cars/cars.js?v=1'; s.onload = ok; s.onerror = no; document.head.append(s); }); }
+function carScript() { return window.CloudCars ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'cars/cars.js?v=1'; s.onload = ok; s.onerror = no; document.head.append(s); }); }
 function carSheet() {
   if (show || room.on) return;
   const open = new URLSearchParams(location.search).has('drive'); // cars stay behind this door until they launch
@@ -2330,7 +2491,7 @@ async function startDrive(kind) {
   closeSheet(); toast('Starting the engine'); try { await carScript(); } catch { toast('The garage is stuck. Try again.'); return; }
   await new Promise(r => setTimeout(r, 30));
   const d = drive, h = selected || byKey.get(store.get('me')) || houses[0];
-  if (!d.cars[kind]) { const c = window.DreamCars.build(kind, { lite: true }), env = carEnv(); c.traverse(o => { if (o.material && o.material.isMeshStandardMaterial) { o.material.envMap = env; o.material.envMapIntensity = o.material.envMapIntensity || 1; o.material.needsUpdate = true; } }); c.rotation.order = 'YZX'; const g = new THREE.Mesh(new THREE.PlaneGeometry(26, 15), new THREE.MeshBasicMaterial({ color: '#ffe9b8', transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending, map: (() => { const q = document.createElement('canvas'); q.width = q.height = 64; const x = q.getContext('2d'), r = x.createRadialGradient(10, 32, 2, 10, 32, 56); r.addColorStop(0, '#fff'); r.addColorStop(1, '#000'); x.fillStyle = r; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(q); })() })); g.rotation.x = -Math.PI / 2; g.position.set(c.userData.spec.L / 2 + 12.5, .16, 0); c.add(g); c.userData.beam = g; d.cars[kind] = c; }
+  if (!d.cars[kind]) { const c = window.CloudCars.build(kind, { lite: true }), env = carEnv(); c.traverse(o => { if (o.material && o.material.isMeshStandardMaterial) { o.material.envMap = env; o.material.envMapIntensity = o.material.envMapIntensity || 1; o.material.needsUpdate = true; } }); c.rotation.order = 'YZX'; const g = new THREE.Mesh(new THREE.PlaneGeometry(26, 15), new THREE.MeshBasicMaterial({ color: '#ffe9b8', transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending, map: (() => { const q = document.createElement('canvas'); q.width = q.height = 64; const x = q.getContext('2d'), r = x.createRadialGradient(10, 32, 2, 10, 32, 56); r.addColorStop(0, '#fff'); r.addColorStop(1, '#000'); x.fillStyle = r; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(q); })() })); g.rotation.x = -Math.PI / 2; g.position.set(c.userData.spec.L / 2 + 12.5, .16, 0); c.add(g); c.userData.beam = g; d.cars[kind] = c; }
   if (d.car) scene.remove(d.car); d.car = d.cars[kind]; d.spec = { ...CAR_SPEC[kind], ...d.car.userData.spec }; scene.add(d.car);
   d.x = h.x + 4.7 * h.flip; d.z = h.z + 8.4 * h.flip; d.th = h.flip > 0 ? Math.PI / 2 : -Math.PI / 2;
   carGrid(); { const L = d.spec.L / 2 - .05, Wd = d.spec.W / 2 - .03, cands = [[d.x, d.z, d.th], [d.x, h.z + 9.6 * h.flip, d.th], [h.x, h.z + 11 * h.flip, 0], [h.x + 8, h.z + 11 * h.flip, 0], [h.x - 8, h.z + 11 * h.flip, 0]], ok = cands.find(c => !carHit(c[0], c[1], Math.cos(c[2]), Math.sin(c[2]), L, Wd)); d.ghost = !ok; if (ok) { d.x = ok[0]; d.z = ok[1]; d.th = ok[2]; } }
@@ -2376,7 +2537,7 @@ function driveCam() {
 
 /* ---------- walk the town as the Mayor, third person. Opens with ?mayor on the address ---------- */
 {
-  const s = stroll, Geoq = () => new Geo().at(0, 0), mat = new THREE.MeshLambertMaterial({ vertexColors: true }), SUIT = '#1c2233', DARK = '#141927', SKIN = '#e8bd9a', R = '#c8352b', G = '#d6b13c'; let man = null;
+  const s = stroll, Geoq = () => new Geo().at(0, 0), mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .65, metalness: .15 }), SUIT = '#1c2233', DARK = '#141927', SKIN = '#e8bd9a', R = '#c8352b', G = '#d6b13c'; let man = null;
   const limb = (build, x, y, z) => { const g = Geoq(); build(g); const m = g.mesh(mat), p = new THREE.Group(); m.castShadow = true; p.position.set(x, y, z); p.add(m); return p; };
   const soft = (w, h, d, r = .06) => { const g = new THREE.BoxGeometry(w, h, d, 3, 3, 3), p = g.attributes.position, v = new THREE.Vector3(), hx = w / 2 - r, hy = h / 2 - r, hz = d / 2 - r; for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const c = new THREE.Vector3(clamp(v.x, -hx, hx), clamp(v.y, -hy, hy), clamp(v.z, -hz, hz)); v.sub(c); if (v.lengthSq() > 0) v.normalize().multiplyScalar(r); v.add(c); p.setXYZ(i, v.x, v.y, v.z); } return g; };
   const buildMan = () => { const r = new THREE.Group(), b = Geoq(), LAP = '#262e45', GOLD = '#e0bb4a', HAIR = '#b9b4ab';
@@ -2461,5 +2622,5 @@ requestAnimationFrame(() => requestAnimationFrame(() => { if (window.bootDone) w
     })
     .catch(() => {});
 
-  Promise.all([pState, pResidents, pSettings]).finally(() => { clearTimeout(timer); dreamCity(); });
+  Promise.all([pState, pResidents, pSettings]).finally(() => { clearTimeout(timer); cloudCity(); });
 }
